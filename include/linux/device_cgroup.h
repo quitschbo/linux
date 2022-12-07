@@ -14,6 +14,7 @@
 #if defined(CONFIG_CGROUP_DEVICE) || defined(CONFIG_CGROUP_BPF)
 int devcgroup_check_permission(short type, u32 major, u32 minor,
 			       short access);
+bool devcgroup_task_is_guarded(struct task_struct *task);
 static inline int devcgroup_inode_permission(struct inode *inode, int mask)
 {
 	short type, access = 0;
@@ -60,6 +61,8 @@ static inline int devcgroup_inode_mknod(int mode, dev_t dev)
 static inline int devcgroup_check_permission(short type, u32 major, u32 minor,
 			       short access)
 { return 0; }
+static inline bool devcgroup_task_is_guarded(struct task_struct *task)
+{ return false; }
 static inline int devcgroup_inode_permission(struct inode *inode, int mask)
 { return 0; }
 static inline int devcgroup_inode_mknod(int mode, dev_t dev)

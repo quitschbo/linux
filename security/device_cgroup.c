@@ -832,6 +832,25 @@ static int devcgroup_legacy_check_permission(short type, u32 major, u32 minor,
 #endif /* CONFIG_CGROUP_DEVICE */
 
 #if defined(CONFIG_CGROUP_DEVICE) || defined(CONFIG_CGROUP_BPF)
+bool devcgroup_task_is_guarded(struct task_struct *task)
+{
+	struct dev_cgroup *dev_cgroup;
+
+	#ifdef CONFIG_CGROUP_BPF
+	if (cgroup_bpf_enabled(CGROUP_DEVICE) &&
+	    cgroup_bpf_task_enabled(task, CGROUP_DEVICE))
+		return true;
+	#endif /* CONFIG_CGROUP_BPF */
+
+	#ifdef CONFIG_CGROUP_DEVICE
+	dev_cgroup = task_devcgroup(task);
+	if (dev_cgroup->behavior == DEVCG_DEFAULT_DENY)
+		return true;
+	#endif /* CONFIG_CGROUP_DEVICE */
+
+	return false;
+}
+EXPORT_SYMBOL(devcgroup_task_is_guarded);
 
 int devcgroup_check_permission(short type, u32 major, u32 minor, short access)
 {

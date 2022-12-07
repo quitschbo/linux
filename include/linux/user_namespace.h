@@ -32,6 +32,7 @@ struct uid_gid_map { /* 64 bytes -- 1 cache line */
 };
 
 #define USERNS_SETGROUPS_ALLOWED 1UL
+#define USERNS_DEVCG_GUARD_ALLOWED  (1UL << 1)
 
 #define USERNS_INIT_FLAGS USERNS_SETGROUPS_ALLOWED
 
@@ -179,6 +180,11 @@ extern bool in_userns(const struct user_namespace *ancestor,
 		       const struct user_namespace *child);
 extern bool current_in_userns(const struct user_namespace *target_ns);
 struct ns_common *ns_get_owner(struct ns_common *ns);
+
+#if defined(CONFIG_CGROUP_DEVICE) || defined(CONFIG_CGROUP_BPF)
+extern ssize_t proc_devcg_guard_write(struct file *, const char __user *, size_t, loff_t *);
+extern int proc_devcg_guard_show(struct seq_file *m, void *v);
+#endif /* defined(CONFIG_CGROUP_DEVICE) || defined(CONFIG_CGROUP_BPF) */
 #else
 
 static inline struct user_namespace *get_user_ns(struct user_namespace *ns)

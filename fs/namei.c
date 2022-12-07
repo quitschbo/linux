@@ -3896,9 +3896,20 @@ int vfs_mknod(struct user_namespace *mnt_userns, struct inode *dir,
 	if (error)
 		return error;
 
-	if ((S_ISCHR(mode) || S_ISBLK(mode)) && !is_whiteout &&
-	    !capable(CAP_MKNOD))
-		return -EPERM;
+	/*
+	 * In case of a device cgroup restirction allow mknod in user
+	 * namespace. Otherwise just check global capability; thus,
+	 * mknod is also disabled for user namespace other than the
+	 * initial one.
+	 */
+	if ((S_ISCHR(mode) || S_ISBLK(mode)) && !is_whiteout) {
+		if ((mnt_userns->flags & USERNS_DEVCG_GUARD_ALLOWED) &&
+		    devcgroup_task_is_guarded(current)) {
+			if (!ns_capable(current_user_ns(), CAP_MKNOD))
+				return -EPERM;
+		} else if (!capable(CAP_MKNOD))
+			return -EPERM;
+	}
 
 	if (!dir->i_op->mknod)
 		return -EPERM;

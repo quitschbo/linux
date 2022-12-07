@@ -1293,6 +1293,88 @@ bool userns_may_setgroups(const struct user_namespace *ns)
 	return allowed;
 }
 
+#if defined(CONFIG_CGROUP_DEVICE) || defined(CONFIG_CGROUP_BPF)
+int proc_devcg_guard_show(struct seq_file *seq, void *v)
+{
+	struct user_namespace *ns = seq->private;
+	unsigned long userns_flags = READ_ONCE(ns->flags);
+
+	seq_printf(seq, "%s\n",
+		   (userns_flags & USERNS_DEVCG_GUARD_ALLOWED) ?
+		   "allow" : "deny");
+	return 0;
+}
+
+ssize_t proc_devcg_guard_write(struct file *file, const char __user *buf,
+			     size_t count, loff_t *ppos)
+{
+	struct seq_file *seq = file->private_data;
+	struct user_namespace *ns = seq->private;
+	char kbuf[8], *pos;
+	bool devcg_guard_allowed;
+	ssize_t ret;
+
+	/* devcg_guard for init userns makes no sense */
+	if (!ns->parent)
+		return -EPERM;
+
+	/* Only allow a very narrow range of strings to be written */
+	ret = -EINVAL;
+	if ((*ppos != 0) || (count >= sizeof(kbuf)))
+		goto out;
+
+	/* What was written? */
+	ret = -EFAULT;
+	if (copy_from_user(kbuf, buf, count))
+		goto out;
+	kbuf[count] = '\0';
+	pos = kbuf;
+
+	/* What is being requested? */
+	ret = -EINVAL;
+	if (strncmp(pos, "allow", 5) == 0) {
+		pos += 5;
+		devcg_guard_allowed = true;
+	} else if (strncmp(pos, "deny", 4) == 0) {
+		pos += 4;
+		devcg_guard_allowed = false;
+	} else
+		goto out;
+
+	/* Verify there is not trailing junk on the line */
+	pos = skip_spaces(pos);
+	if (*pos != '\0')
+		goto out;
+
+	ret = -EPERM;
+	mutex_lock(&userns_state_mutex);
+	if (devcg_guard_allowed) {
+		/* Only allow to enable device cgroup guard if we have
+		 * CAP_MKNOD over the parent user namespace and the
+		 * opener of the dev_guard file also has CAP_MKNOD in
+		 * the parent userns.
+		 */
+		if (!ns_capable(ns->parent, CAP_MKNOD) ||
+		    !file_ns_capable(file, ns->parent, CAP_MKNOD))
+			goto out_unlock;
+
+		ns->flags |= USERNS_DEVCG_GUARD_ALLOWED;
+	} else {
+		ns->flags &= ~USERNS_DEVCG_GUARD_ALLOWED;
+	}
+	mutex_unlock(&userns_state_mutex);
+
+	/* Report a successful write */
+	*ppos = count;
+	ret = count;
+out:
+	return ret;
+out_unlock:
+	mutex_unlock(&userns_state_mutex);
+	goto out;
+}
+#endif /* defined(CONFIG_CGROUP_DEVICE) || defined(CONFIG_CGROUP_BPF) */
+
 /*
  * Returns true if @child is the same namespace or a descendant of
  * @ancestor.
