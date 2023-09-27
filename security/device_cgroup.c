@@ -8,7 +8,6 @@
 #include <linux/bpf-cgroup.h>
 #include <linux/cgroup.h>
 #include <linux/ctype.h>
-#include <linux/device_cgroup.h>
 #include <linux/list.h>
 #include <linux/lsm_hooks.h>
 #include <linux/uaccess.h>
@@ -16,6 +15,16 @@
 #include <linux/slab.h>
 #include <linux/rcupdate.h>
 #include <linux/mutex.h>
+
+#define DEVCG_ACC_MKNOD 1
+#define DEVCG_ACC_READ  2
+#define DEVCG_ACC_WRITE 4
+#define DEVCG_ACC_MASK (DEVCG_ACC_MKNOD | DEVCG_ACC_READ | DEVCG_ACC_WRITE)
+
+#define DEVCG_DEV_BLOCK 1
+#define DEVCG_DEV_CHAR  2
+#define DEVCG_DEV_ALL   4  /* this represents all devices */
+
 
 #ifdef CONFIG_CGROUP_DEVICE
 
@@ -858,7 +867,7 @@ static int devcgroup_legacy_check_permission(short type, u32 major, u32 minor,
 
 #if defined(CONFIG_CGROUP_DEVICE) || defined(CONFIG_CGROUP_BPF)
 
-int devcgroup_check_permission(short type, u32 major, u32 minor, short access)
+static int devcgroup_check_permission(short type, u32 major, u32 minor, short access)
 {
 	int rc = BPF_CGROUP_RUN_PROG_DEVICE_CGROUP(type, major, minor, access);
 
@@ -873,7 +882,6 @@ int devcgroup_check_permission(short type, u32 major, u32 minor, short access)
 
 	#endif /* CONFIG_CGROUP_DEVICE */
 }
-EXPORT_SYMBOL(devcgroup_check_permission);
 
 int devcgroup_device_access(umode_t mode, dev_t dev, int mask)
 {
