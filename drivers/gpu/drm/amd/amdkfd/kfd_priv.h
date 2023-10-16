@@ -38,7 +38,7 @@
 #include <linux/seq_file.h>
 #include <linux/kref.h>
 #include <linux/sysfs.h>
-#include <linux/device_cgroup.h>
+#include <linux/security.h>
 #include <drm/drm_file.h>
 #include <drm/drm_drv.h>
 #include <drm/drm_device.h>
@@ -1480,19 +1480,13 @@ bool kfd_is_locked(void);
 void kfd_inc_compute_active(struct kfd_node *dev);
 void kfd_dec_compute_active(struct kfd_node *dev);
 
-/* Cgroup Support */
-/* Check with device cgroup if @kfd device is accessible */
+/* Check if @kfd device is accessible */
 static inline int kfd_devcgroup_check_permission(struct kfd_node *kfd)
 {
-#if defined(CONFIG_CGROUP_DEVICE) || defined(CONFIG_CGROUP_BPF)
 	struct drm_device *ddev = adev_to_drm(kfd->adev);
 
-	return devcgroup_check_permission(DEVCG_DEV_CHAR, DRM_MAJOR,
-					  ddev->render->index,
-					  DEVCG_ACC_WRITE | DEVCG_ACC_READ);
-#else
-	return 0;
-#endif
+	return security_device_access(S_IFCHR, MKDEV(DRM_MAJOR, ddev->render->index),
+				       MAY_WRITE | MAY_READ);
 }
 
 static inline bool kfd_is_first_node(struct kfd_node *node)
