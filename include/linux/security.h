@@ -484,6 +484,7 @@ int security_inode_notifysecctx(struct inode *inode, void *ctx, u32 ctxlen);
 int security_inode_setsecctx(struct dentry *dentry, void *ctx, u32 ctxlen);
 int security_inode_getsecctx(struct inode *inode, void **ctx, u32 *ctxlen);
 int security_locked_down(enum lockdown_reason what);
+int security_device_access(umode_t mode, dev_t dev, int mask);
 #else /* CONFIG_SECURITY */
 
 static inline int call_blocking_lsm_notifier(enum lsm_event event, void *data)
@@ -1395,6 +1396,22 @@ static inline int security_locked_down(enum lockdown_reason what)
 {
 	return 0;
 }
+
+#if defined(CONFIG_CGROUP_DEVICE) || defined(CONFIG_CGROUP_BPF)
+/* This function is in security/device_cgroup.c */
+extern int devcgroup_device_access(umode_t mode, dev_t dev, int mask);
+
+static inline int security_device_access(umode_t mode, dev_t dev, int mask)
+{
+	return devcgroup_device_access(mode, dev, mask);
+}
+#else
+static inline int security_device_access(umode_t mode, dev_t dev, int mask)
+{
+	return 0;
+}
+#endif
+
 #endif	/* CONFIG_SECURITY */
 
 #if defined(CONFIG_SECURITY) && defined(CONFIG_WATCH_QUEUE)
