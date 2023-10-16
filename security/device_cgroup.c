@@ -6,10 +6,11 @@
  */
 
 #include <linux/bpf-cgroup.h>
-#include <linux/device_cgroup.h>
 #include <linux/cgroup.h>
 #include <linux/ctype.h>
+#include <linux/device_cgroup.h>
 #include <linux/list.h>
+#include <linux/lsm_hooks.h>
 #include <linux/uaccess.h>
 #include <linux/seq_file.h>
 #include <linux/slab.h>
@@ -873,4 +874,52 @@ int devcgroup_check_permission(short type, u32 major, u32 minor, short access)
 	#endif /* CONFIG_CGROUP_DEVICE */
 }
 EXPORT_SYMBOL(devcgroup_check_permission);
+
+int devcgroup_device_access(umode_t mode, dev_t dev, int mask)
+{
+	short type, access = 0;
+
+	if (S_ISBLK(mode))
+		type = DEVCG_DEV_BLOCK;
+	else if (S_ISCHR(mode))
+		type = DEVCG_DEV_CHAR;
+	else
+		return 0;
+
+	if (S_ISCHR(mode) && dev == WHITEOUT_DEV)
+		return 0;
+
+	if (mask & MAY_WRITE)
+		access |= DEVCG_ACC_WRITE;
+	if (mask & MAY_READ)
+		access |= DEVCG_ACC_READ;
+	if (mask & MAY_MKNOD)
+		access |= DEVCG_ACC_MKNOD;
+
+	return devcgroup_check_permission(type, MAJOR(dev), MINOR(dev), access);
+}
+EXPORT_SYMBOL(devcgroup_device_access);
+
+#ifdef CONFIG_SECURITY
+
+static struct security_hook_list devcgroup_hooks[] __ro_after_init = {
+	LSM_HOOK_INIT(device_access, devcgroup_device_access),
+};
+
+static int __init devcgroup_init(void)
+{
+	security_add_hooks(devcgroup_hooks, ARRAY_SIZE(devcgroup_hooks),
+			   "devcgroup");
+	pr_info("device cgroup initialized\n");
+	return 0;
+}
+
+DEFINE_LSM(devcgroup) = {
+	.name = "devcgroup",
+	.order = LSM_ORDER_FIRST,
+	.init = devcgroup_init,
+};
+
+#endif /* CONFIG_SECURITY */
+
 #endif /* defined(CONFIG_CGROUP_DEVICE) || defined(CONFIG_CGROUP_BPF) */
