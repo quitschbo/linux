@@ -342,7 +342,7 @@ static struct super_block *alloc_super(struct file_system_type *type, int flags,
 	 * one.
 	 *
 	 * In case that succeeds, it will acquire the s_umount
-	 * lock of the old one. Since these are clearly distrinct
+	 * lock of the old one. Since these are clearly distinct
 	 * locks, and this object isn't exposed yet, there's no
 	 * risk of deadlocks.
 	 *
