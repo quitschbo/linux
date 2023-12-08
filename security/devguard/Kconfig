@@ -1,0 +1,9 @@
+config SECURITY_DEVGUARD
+	bool "Devguard for device node creation"
+	depends on SECURITY
+	depends on CGROUP_BPF
+	default n
+	help
+	  Build support for an LSM that allows to guard device node
+	  creation in non-initial user namespace in cooperation of an
+	  attached cgroup device program.
