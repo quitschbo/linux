@@ -1481,7 +1481,7 @@ void kfd_inc_compute_active(struct kfd_node *dev);
 void kfd_dec_compute_active(struct kfd_node *dev);
 
 /* Check if @kfd device is accessible */
-static inline int kfd_devcgroup_check_permission(struct kfd_node *kfd)
+static inline int kfd_security_device_access(struct kfd_node *kfd)
 {
 	struct drm_device *ddev = adev_to_drm(kfd->adev);
 
