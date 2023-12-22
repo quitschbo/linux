@@ -1221,6 +1221,32 @@ int security_sb_alloc(struct super_block *sb)
 	return rc;
 }
 
+/*
+ * security_sb_device_access() - handle device access on this sb
+ * @sb: filesystem superblock
+ *
+ * Let LSMs decide if device access management is allowed for this superblock.
+ *
+ * Return: Returns 0 if LSMs handle device access, -EOPNOTSUPP if none does and
+ * 	   -ERRNO on any other failure.
+ */
+int security_sb_device_access(struct super_block *sb)
+{
+	int thisrc;
+	int rc = LSM_RET_DEFAULT(sb_device_access);
+	struct security_hook_list *hp;
+
+	hlist_for_each_entry(hp, &security_hook_heads.sb_device_access, list) {
+		thisrc = hp->hook.sb_device_access(sb);
+		if (thisrc != LSM_RET_DEFAULT(sb_device_access)) {
+			rc = thisrc;
+			if (thisrc != 0)
+				break;
+		}
+	}
+	return rc;
+}
+
 /**
  * security_sb_delete() - Release super_block LSM associated objects
  * @sb: filesystem superblock

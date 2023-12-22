@@ -325,7 +325,7 @@ static struct super_block *alloc_super(struct file_system_type *type, int flags,
 {
 	struct super_block *s = kzalloc(sizeof(struct super_block),  GFP_USER);
 	static const struct super_operations default_op;
-	int i;
+	int i, err;
 
 	if (!s)
 		return NULL;
@@ -362,8 +362,16 @@ static struct super_block *alloc_super(struct file_system_type *type, int flags,
 	}
 	s->s_bdi = &noop_backing_dev_info;
 	s->s_flags = flags;
-	if (s->s_user_ns != &init_user_ns)
+
+	err = security_sb_device_access(s);
+	if (err < 0 && err != -EOPNOTSUPP)
+		goto fail;
+
+	if (err && s->s_user_ns != &init_user_ns)
 		s->s_iflags |= SB_I_NODEV;
+	else
+		s->s_iflags |= SB_I_MANAGED_DEVICES;
+
 	INIT_HLIST_NODE(&s->s_instances);
 	INIT_HLIST_BL_HEAD(&s->s_roots);
 	mutex_init(&s->s_sync_lock);

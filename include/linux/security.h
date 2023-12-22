@@ -298,6 +298,7 @@ int security_fs_context_submount(struct fs_context *fc, struct super_block *refe
 int security_fs_context_dup(struct fs_context *fc, struct fs_context *src_fc);
 int security_fs_context_parse_param(struct fs_context *fc, struct fs_parameter *param);
 int security_sb_alloc(struct super_block *sb);
+int security_sb_device_access(struct super_block *sb);
 void security_sb_delete(struct super_block *sb);
 void security_sb_free(struct super_block *sb);
 void security_free_mnt_opts(void **mnt_opts);
@@ -651,6 +652,11 @@ static inline int security_fs_context_parse_param(struct fs_context *fc,
 static inline int security_sb_alloc(struct super_block *sb)
 {
 	return 0;
+}
+
+static inline int security_sb_device_access(struct super_block *sb)
+{
+	return -EOPNOTSUPP;
 }
 
 static inline void security_sb_delete(struct super_block *sb)
