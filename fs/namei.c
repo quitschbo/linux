@@ -3960,15 +3960,10 @@ EXPORT_SYMBOL(user_path_create);
 int vfs_mknod(struct mnt_idmap *idmap, struct inode *dir,
 	      struct dentry *dentry, umode_t mode, dev_t dev)
 {
-	bool is_whiteout = S_ISCHR(mode) && dev == WHITEOUT_DEV;
 	int error = may_create(idmap, dir, dentry);
 
 	if (error)
 		return error;
-
-	if ((S_ISCHR(mode) || S_ISBLK(mode)) && !is_whiteout &&
-	    !capable(CAP_MKNOD))
-		return -EPERM;
 
 	if (!dir->i_op->mknod)
 		return -EPERM;
