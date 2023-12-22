@@ -1438,6 +1438,24 @@ int cap_mmap_file(struct file *file, unsigned long reqprot,
 	return 0;
 }
 
+int cap_inode_mknod(struct inode *dir, struct dentry *dentry, umode_t mode,
+		    dev_t dev)
+{
+	bool is_whiteout = S_ISCHR(mode) && dev == WHITEOUT_DEV;
+	struct super_block *sb = dir->i_sb;
+	struct user_namespace *userns;
+
+	if (dir->i_sb->s_iflags & SB_I_MANAGED_DEVICES)
+		userns = sb->s_user_ns;
+	else
+		userns = &init_user_ns;
+	if ((S_ISCHR(mode) || S_ISBLK(mode)) && !is_whiteout &&
+	    !ns_capable(userns, CAP_MKNOD))
+		return -EPERM;
+
+	return 0;
+}
+
 #ifdef CONFIG_SECURITY
 
 static struct security_hook_list capability_hooks[] __ro_after_init = {
@@ -1448,6 +1466,7 @@ static struct security_hook_list capability_hooks[] __ro_after_init = {
 	LSM_HOOK_INIT(capget, cap_capget),
 	LSM_HOOK_INIT(capset, cap_capset),
 	LSM_HOOK_INIT(bprm_creds_from_file, cap_bprm_creds_from_file),
+	LSM_HOOK_INIT(inode_mknod, cap_inode_mknod),
 	LSM_HOOK_INIT(inode_need_killpriv, cap_inode_need_killpriv),
 	LSM_HOOK_INIT(inode_killpriv, cap_inode_killpriv),
 	LSM_HOOK_INIT(inode_getsecurity, cap_inode_getsecurity),

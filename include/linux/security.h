@@ -154,6 +154,8 @@ extern int cap_capset(struct cred *new, const struct cred *old,
 extern int cap_bprm_creds_from_file(struct linux_binprm *bprm, const struct file *file);
 int cap_inode_setxattr(struct dentry *dentry, const char *name,
 		       const void *value, size_t size, int flags);
+int cap_inode_mknod(struct inode *dir, struct dentry *dentry, umode_t mode,
+		    dev_t dev);
 int cap_inode_removexattr(struct mnt_idmap *idmap,
 			  struct dentry *dentry, const char *name);
 int cap_inode_need_killpriv(struct dentry *dentry);
@@ -829,11 +831,10 @@ static inline int security_inode_rmdir(struct inode *dir,
 	return 0;
 }
 
-static inline int security_inode_mknod(struct inode *dir,
-					struct dentry *dentry,
-					int mode, dev_t dev)
+static inline int security_inode_mknod(struct inode *dir, struct dentry *dentry,
+				       int mode, dev_t dev)
 {
-	return 0;
+	return cap_inode_mknod(dir, dentry, mode, dev);
 }
 
 static inline int security_inode_rename(struct inode *old_dir,
