@@ -93,6 +93,31 @@ static inline bool wait_born(struct super_block *sb)
 	return flags & (SB_BORN | SB_DYING);
 }
 
+static int sysctl_managed_devices __read_mostly;
+
+#ifdef CONFIG_SYSCTL
+static struct ctl_table super_sysctls[] = {
+	{
+		.procname	= "managed_devices",
+		.data		= &sysctl_managed_devices,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+		.extra1		= SYSCTL_ZERO,
+		.extra2		= SYSCTL_ONE,
+	},
+	{ }
+};
+
+static int __init init_fs_super_sysctls(void)
+{
+	register_sysctl_init("fs", super_sysctls);
+	return 0;
+}
+fs_initcall(init_fs_super_sysctls);
+
+#endif /* CONFIG_SYSCTL */
+
 /**
  * super_lock - wait for superblock to become ready and lock it
  * @sb: superblock to wait for
@@ -362,8 +387,12 @@ static struct super_block *alloc_super(struct file_system_type *type, int flags,
 	}
 	s->s_bdi = &noop_backing_dev_info;
 	s->s_flags = flags;
-	if (s->s_user_ns != &init_user_ns)
+
+	if (sysctl_managed_devices)
+		s->s_iflags |= SB_I_MANAGED_DEVICES;
+	else if (s->s_user_ns != &init_user_ns)
 		s->s_iflags |= SB_I_NODEV;
+
 	INIT_HLIST_NODE(&s->s_instances);
 	INIT_HLIST_BL_HEAD(&s->s_roots);
 	mutex_init(&s->s_sync_lock);

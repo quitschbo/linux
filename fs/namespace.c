@@ -4887,7 +4887,6 @@ found:
 
 static bool mount_too_revealing(const struct super_block *sb, int *new_mnt_flags)
 {
-	const unsigned long required_iflags = SB_I_NOEXEC | SB_I_NODEV;
 	struct mnt_namespace *ns = current->nsproxy->mnt_ns;
 	unsigned long s_iflags;
 
@@ -4899,9 +4898,13 @@ static bool mount_too_revealing(const struct super_block *sb, int *new_mnt_flags
 	if (!(s_iflags & SB_I_USERNS_VISIBLE))
 		return false;
 
-	if ((s_iflags & required_iflags) != required_iflags) {
-		WARN_ONCE(1, "Expected s_iflags to contain 0x%lx\n",
-			  required_iflags);
+	if (!(s_iflags & SB_I_NOEXEC)) {
+		WARN_ONCE(1, "Expected s_iflags to contain SB_I_NOEXEC\n");
+		return true;
+	}
+
+	if (!(s_iflags & (SB_I_NODEV | SB_I_MANAGED_DEVICES))) {
+		WARN_ONCE(1, "Expected s_iflags to contain device access mask\n");
 		return true;
 	}
 
